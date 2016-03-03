@@ -146,39 +146,6 @@ function (angular, app, _, $, kbn) {
       $scope.get_data();
 
     };
-
-    $scope.prepareOrder = function(aggregation) {
-        switch ($scope.panel.order) {
-        case 'term':
-          return aggregation.order('_term', 'desc');
-        case 'reverse_unique':
-          return aggregation.order('unique', 'asc');
-        case 'unique':
-          return aggregation.order('unique', 'desc');
-        case 'reverse_count':
-          return aggregation.order('_count', 'asc');
-        case 'reverse_term':
-          return aggregation.order('_term', 'asc');
-        case 'sum':
-          return aggregation.order('stats.sum', 'desc');
-        case 'reverse_sum':
-          return aggregation.order('stats.sum', 'asc');
-        case 'avg':
-          return aggregation.order('stats.avg', 'desc');
-        case 'reverse_avg':
-          return aggregation.order('stats.avg', 'asc');
-        case 'min':
-          return aggregation.order('stats.min', 'desc');
-        case 'reverse_min':
-          return aggregation.order('stats.avg', 'asc');
-        case 'max':
-          return aggregation.order('stats.max', 'desc');
-        case 'reverse_max':
-          return aggregation.order('stats.avg', 'asc');
-        default :
-          return aggregation.order('_count', 'desc');
-        }
-      };
     
     $scope.get_data = function() {
       // Make sure we have everything for the request to complete
@@ -307,6 +274,39 @@ function (angular, app, _, $, kbn) {
       window.saveAs(blob, $scope.panel.title + "-" + $scope.panel.field + ".csv");
       return true;
     };
+    
+    $scope.prepareOrder = function(aggregation) {
+        switch ($scope.panel.order) {
+        case 'term':
+          return aggregation.order('_term', 'desc');
+        case 'reverse_unique':
+          return aggregation.order('unique', 'asc');
+        case 'unique':
+          return aggregation.order('unique', 'desc');
+        case 'reverse_count':
+          return aggregation.order('_count', 'asc');
+        case 'reverse_term':
+          return aggregation.order('_term', 'asc');
+        case 'sum':
+          return aggregation.order('stats.sum', 'desc');
+        case 'reverse_sum':
+          return aggregation.order('stats.sum', 'asc');
+        case 'avg':
+          return aggregation.order('stats.avg', 'desc');
+        case 'reverse_avg':
+          return aggregation.order('stats.avg', 'asc');
+        case 'min':
+          return aggregation.order('stats.min', 'desc');
+        case 'reverse_min':
+          return aggregation.order('stats.avg', 'asc');
+        case 'max':
+          return aggregation.order('stats.max', 'desc');
+        case 'reverse_max':
+          return aggregation.order('stats.avg', 'asc');
+        default :
+          return aggregation.order('_count', 'desc');
+        }
+      };
 
   });
 
