@@ -1,4 +1,4 @@
-/*! elastic.js - v1.2.0 - 2014-10-13
+/*! elastic.js - v1.2.0 - 2014-09-07
  * https://github.com/fullscale/elastic.js
  * Copyright (c) 2014 FullScale Labs, LLC; Licensed MIT */
 
@@ -55,6 +55,8 @@
     isSuggest, // checks valid ejs Suggest object
     isGenerator, // checks valid ejs Generator object
     isScoreFunction, // checks valid ejs ScoreFunction object
+    genParamStr,
+    genClientParams,
 
     // create ejs object
     ejs;
@@ -230,6 +232,55 @@
 
   isScoreFunction = function (obj) {
     return (isEJSObject(obj) && obj._type() === 'score function');
+  };
+
+  // converts client params to a string param1=val1&param2=val1
+  genParamStr = function (params, excludes) {
+    var
+        clientParams = genClientParams(params, excludes),
+        parts = [],
+        p;
+
+    for (p in clientParams) {
+      if (!has(clientParams, p)) {
+        continue;
+      }
+
+      parts.push(p + '=' + encodeURIComponent(clientParams[p]));
+    }
+
+    return parts.join('&');
+  };
+
+  // Converts the stored params into parameters that will be passed
+  // to a client.  Certain parameter are skipped, and others require
+  // special processing before being sent to the client.
+  genClientParams = function (params, excludes) {
+    var
+        clientParams = {},
+        param,
+        paramVal;
+
+    for (param in params) {
+      if (!has(params, param)) {
+        continue;
+      }
+
+      // skip params that don't go in the query string
+      if (indexOf(excludes, param) !== -1) {
+        continue;
+      }
+
+      // process all other params
+      paramVal = params[param];
+      if (isArray(paramVal)) {
+        paramVal = paramVal.join();
+      }
+
+      clientParams[param] = paramVal;
+    }
+
+    return clientParams;
   };
 
   /**
@@ -5563,233 +5614,6 @@
 
   /**
     @class
-    <p>A top_hits metric aggregator keeps track of the most relevant document being
-    aggregated. This aggregator is intended to be used as a sub aggregator, so that
-    the top matching documents can be aggregated per bucket. </p>
-
-    @name ejs.TopHitsAggregation
-    @ejs aggregation
-    @borrows ejs.AggregationMixin.aggregation as aggregation
-    @borrows ejs.AggregationMixin.agg as agg
-    @borrows ejs.AggregationMixin._type as _type
-    @borrows ejs.AggregationMixin.toJSON as toJSON
-
-    @desc
-    <p>top_hits metric aggregator keeps track of the most relevant document being
-    aggregated.</p>
-
-    @param {String} name The name which be used to refer to this aggregation.
-
-    */
-  ejs.TopHitsAggregation = function (name) {
-
-    var
-    _common = ejs.MetricsAggregationMixin(name, 'top_hits'),
-    agg = _common.toJSON();
-
-    return extend(_common, {
-      /**
-      <p> The offset from the first result you want to fetch. </p>
-
-      @member ejs.TopHitsAggregation
-      @param {Integer} from The offset from the first result you want to fetch.
-      @returns {Object} returns <code>this</code> so that calls can be chained.
-      */
-      from: function (from) {
-        if (from === null) {
-          return agg[name].top_hits.from;
-        }
-
-        agg[name].top_hits.from = from;
-        return this;
-      },
-
-      /**
-      <p> Sets the maximum number of top matching hits to return per bucket. </p>
-
-      @member ejs.TopHitsAggregation
-      @param {Integer} size The numer of aggregation entries to be returned per bucket.
-      @returns {Object} returns <code>this</code> so that calls can be chained.
-      */
-      size: function (size) {
-        if (size === null) {
-          return agg[name].top_hits.size;
-        }
-
-        agg[name].top_hits.size = size;
-        return this;
-      },
-
-      /**
-      <p>The maximum number of top matching hits to return per bucket.</p>
-
-      @member ejs.TopHitsAggregation
-      @param {Array} sort How to sort the the top matching hits
-      @returns {Object} returns <code>this</code> so that calls can be chained.
-      */
-      sort: function (sort) {
-        if (sort === null) {
-          return agg[name].top_hits.sort;
-        }
-
-        agg[name].top_hits.sort = sort;
-        return this;
-      },
-
-      /**
-      <p>Enables score computation and tracking during sorting.
-      By default, sorting scores are not computed. <p/>
-
-      @member ejs.TopHitsAggregation
-      @param {Boolean} trueFalse If scores should be computed and tracked.
-      @returns {Object} returns <code>this</code> so that calls can be chained.
-      */
-      trackScores: function (trueFalse) {
-        if (trueFalse === null) {
-          return agg[name].top_hits.track_scores;
-        }
-
-        agg[name].top_hits.track_scores = trueFalse;
-        return this;
-      },
-
-      /**
-      <p>Enable/Disable returning version number for each hit.</p>
-
-      @member ejs.TopHitsAggregation
-      @param {Boolean} trueFalse true to enable, false to disable
-      @returns {Object} returns <code>this</code> so that calls can be chained.
-      */
-      version: function (trueFalse) {
-        if (trueFalse === null) {
-          return agg[name].top_hits.version;
-        }
-
-        agg[name].top_hits.version = trueFalse;
-        return this;
-      },
-
-      /**
-      <p>Enable/Disable explanation of score for each hi.</p>
-
-      @member ejs.TopHitsAggregation
-      @param {Boolean} trueFalse true to enable, false to disable
-      @returns {Object} returns <code>this</code> so that calls can be chained.
-      */
-      explain: function (trueFalse) {
-        if (trueFalse === null) {
-          return agg[name].top_hits.explain;
-        }
-
-        agg[name].top_hits.explain = trueFalse;
-        return this;
-      },
-
-      /**
-      <p>Performs highlighting based on the <code>Highlight</code> settings.</p>
-
-      @member ejs.TopHitsAggregation
-      @param {Highlight} h A valid Highlight object
-      @returns {Object} returns <code>this</code> so that calls can be chained.
-      */
-      highlight: function (h) {
-        if (h === null) {
-          return agg[name].top_hits.highlight;
-        }
-
-        if (!isHighlight(h)) {
-          throw new TypeError('Argument must be a Highlight object');
-        }
-
-        agg[name].top_hits.highlight = h.toJSON();
-        return this;
-      },
-
-      /**
-      <p>Computes a document property dynamically based on the supplied <code>ScriptField</code>.</p>
-
-      @member ejs.TopHitsAggregation
-      @param {ScriptField} oScriptField A valid <code>ScriptField</code>.
-      @returns {Object} returns <code>this</code> so that calls can be chained.
-      */
-      scriptField: function (oScriptField) {
-        if (oScriptField === null) {
-          return agg[name].top_hits.script_fields;
-        }
-
-        if (agg[name].top_hits.script_fields === undefined) {
-          agg[name].top_hits.script_fields = {};
-        }
-
-        if (!isScriptField(oScriptField)) {
-          throw new TypeError('Argument must be a ScriptField');
-        }
-
-        extend(agg[name].top_hits.script_fields, oScriptField.toJSON());
-        return this;
-      },
-
-    /**
-      <p>Allows to return the field data representation of a field for each hit.</p>
-
-      @member ejs.TopHitsAggregation
-      @param {Array} Fields to return field data representation for.
-      @returns {Object} returns <code>this</code> so that calls can be chained.
-      */
-      fieldDataFields: function (fielddata_fields) {
-        if (fielddata_fields === null) {
-          return agg[name].top_hits.fielddata_fields;
-        }
-
-        agg[name].top_hits.fielddata_fields = fielddata_fields;
-        return this;
-      },
-
-      /**
-      <p> Allows to control how the _source field is returned with every hit.
-       By default operations return the contents of the _source field
-       unless you have used the fields parameter or if the _source field
-       is disabled.  Set the includes parameter to false to completely
-       disable returning the source field. </p>
-
-       @member ejs.TopHitsAggregation
-       @param {(String|Boolean|String[])} includes The field or list of fields to include as array.
-         Set to a boolean false to disable the source completely.
-       @param {(String|String[])} excludes The  optional field or list of fields to exclude.
-       @returns {Object} returns <code>this</code> so that calls can be chained.
-       */
-      source: function (includes, excludes) {
-        if (includes === undefined && excludes === undefined) {
-          return agg[name].top_hits._source;
-        }
-
-        if (!isArray(includes) && !isString(includes) && !isBoolean(includes)) {
-          throw new TypeError('Argument includes must be a string, an array, or a boolean');
-        }
-
-        if (excludes !== undefined && !isArray(excludes) && !isString(excludes)) {
-          throw new TypeError('Argument excludes must be a string or an array');
-        }
-
-        if (isBoolean(includes)) {
-          agg[name].top_hits._source = includes;
-        } else {
-          agg[name].top_hits._source = {
-            includes: includes
-          };
-
-          if (excludes !== undefined) {
-            agg[name].top_hits._source = excludes;
-          }
-        }
-
-        return this;
-      }
-    });
-  };
-
-  /**
-    @class
     <p>A single-value metrics aggregation that counts the number of values that
     are extracted from the aggregated documents. These values can be extracted
     either from specific fields in the documents, or be generated by a provided
@@ -7027,7 +6851,7 @@
 
   /**
     @class
-    <p>The has_child filter results in parent documents that have child docs
+    <p>The has_child filter results in parent documents that have child docs 
     matching the query being returned.</p>
 
     @name ejs.HasChildFilter
@@ -7041,23 +6865,20 @@
     @desc
     Returns results that have child documents matching the filter.
 
-    @param {Object} qryOrFltr A valid query or filter object.
+    @param {Object} qry A valid query object.
     @param {String} type The child type
     */
-  ejs.HasChildFilter = function (qryOrFltr, type) {
+  ejs.HasChildFilter = function (qry, type) {
 
-    var
+    if (!isQuery(qry)) {
+      throw new TypeError('No Query object found');
+    }
+    
+    var 
       _common = ejs.FilterMixin('has_child'),
       filter = _common.toJSON();
-
-    if (isQuery(qryOrFltr)) {
-      filter.has_child.query = qryOrFltr.toJSON();
-    } else if (isFilter(qryOrFltr)) {
-      filter.has_child.filter = qryOrFltr.toJSON();
-    } else if (qryOrFltr != null) {
-      throw new TypeError('Argument must be query or filter');
-    }
-
+    
+    filter.has_child.query = qry.toJSON();
     filter.has_child.type = type;
 
     return extend(_common, {
@@ -7073,11 +6894,11 @@
         if (q == null) {
           return filter.has_child.query;
         }
-
+  
         if (!isQuery(q)) {
           throw new TypeError('Argument must be a Query object');
         }
-
+        
         filter.has_child.query = q.toJSON();
         return this;
       },
@@ -7094,11 +6915,11 @@
         if (f == null) {
           return filter.has_child.filter;
         }
-
+  
         if (!isFilter(f)) {
           throw new TypeError('Argument must be a Filter object');
         }
-
+        
         filter.has_child.filter = f.toJSON();
         return this;
       },
@@ -7114,7 +6935,7 @@
         if (t == null) {
           return filter.has_child.type;
         }
-
+  
         filter.has_child.type = t;
         return this;
       },
@@ -7134,10 +6955,10 @@
         filter.has_child.short_circuit_cutoff = cutoff;
         return this;
       },
-
+      
       /**
-            Sets the scope of the filter.  A scope allows to run facets on the
-            same scope name that will work against the child documents.
+            Sets the scope of the filter.  A scope allows to run facets on the 
+            same scope name that will work against the child documents. 
 
             @deprecated since elasticsearch 0.90
             @member ejs.HasChildFilter
@@ -7147,13 +6968,13 @@
       scope: function (s) {
         return this;
       }
-
+      
     });
   };
 
   /**
     @class
-    <p>The has_parent results in child documents that have parent docs matching
+    <p>The has_parent results in child documents that have parent docs matching 
     the query being returned.</p>
 
     @name ejs.HasParentFilter
@@ -7167,23 +6988,20 @@
     @desc
     Returns results that have parent documents matching the filter.
 
-    @param {Object} qryOrFltr A valid query or filter object.
+    @param {Object} qry A valid query object.
     @param {String} parentType The child type
     */
-  ejs.HasParentFilter = function (qryOrFltr, parentType) {
+  ejs.HasParentFilter = function (qry, parentType) {
 
-    var
+    if (!isQuery(qry)) {
+      throw new TypeError('No Query object found');
+    }
+    
+    var 
       _common = ejs.FilterMixin('has_parent'),
       filter = _common.toJSON();
-
-    if (isQuery(qryOrFltr)) {
-      filter.has_parent.query = qryOrFltr.toJSON();
-    } else if (isFilter(qryOrFltr)) {
-      filter.has_parent.filter = qryOrFltr.toJSON();
-    } else if (qryOrFltr != null) {
-      throw new TypeError('Argument must be query or filter');
-    }
-
+    
+    filter.has_parent.query = qry.toJSON();
     filter.has_parent.parent_type = parentType;
 
     return extend(_common, {
@@ -7203,11 +7021,11 @@
         if (!isQuery(q)) {
           throw new TypeError('Argument must be a Query object');
         }
-
+        
         filter.has_parent.query = q.toJSON();
         return this;
       },
-
+      
       /**
             Sets the filter
 
@@ -7224,7 +7042,7 @@
         if (!isFilter(f)) {
           throw new TypeError('Argument must be a Filter object');
         }
-
+        
         filter.has_parent.filter = f.toJSON();
         return this;
       },
@@ -7246,8 +7064,8 @@
       },
 
       /**
-            Sets the scope of the filter.  A scope allows to run facets on the
-            same scope name that will work against the parent documents.
+            Sets the scope of the filter.  A scope allows to run facets on the 
+            same scope name that will work against the parent documents. 
 
             @deprecated since elasticsearch 0.90
             @member ejs.HasParentFilter
@@ -7257,7 +7075,7 @@
       scope: function (s) {
         return this;
       }
-
+      
     });
   };
 
@@ -15749,9 +15567,8 @@
             to a specific field by passing the field name in to the
             <code>oField</code> parameter.  Valid values for order are:
 
-            plain - the slower Lucene standard highligher
-            postings - the postings highligher
-            fvh - the fast vector based highligher
+            fast-vector-highlighter - the fast vector based highligher
+            highlighter - the slower plain highligher
 
             @member ejs.Highlight
             @param {String} t The highligher.
@@ -15766,7 +15583,7 @@
         }
 
         t = t.toLowerCase();
-        if (t === 'fvh' || t === 'plain' ||
+        if (t === 'fast-vector-highlighter' || t === 'highlighter' ||
             t === 'postings') {
           addOption(oField, 'type', t);
         }
@@ -15970,54 +15787,118 @@
   };
 
   /**
-    @class
-    <p>The <code>Request</code> object provides methods generating an elasticsearch request body.</p>
+   @class
+       <p>The <code>Request</code> object provides methods generating an elasticsearch request body.</p>
 
-    @name ejs.Request
-    @ejs request
+   @name ejs.Request
+   @ejs request
 
-    @desc
-    <p>Provides methods for generating request bodies.</p>
+   @desc
+   <p>Provides methods for generating request bodies.</p>
 
-    @param {Object} conf A configuration object containing the initilization
-      parameters.  The following parameters can be set in the conf object:
-        indices - single index name or array of index names
-        types - single type name or array of types
-        routing - the shard routing value
-    */
-  ejs.Request = function () {
+   @param {Object} conf A configuration object containing the initilization
+   parameters.  The following parameters can be set in the conf object:
+   indices - single index name or array of index names
+   types - single type name or array of types
+   routing - the shard routing value
+   */
+  ejs.Request = function (conf) {
 
-    /**
-        The internal query object.
-        @member ejs.Request
-        @property {Object} query
-        */
     var query = {};
+    var indices = {};
+    var types = {};
+    var params  = {};
+
+    // gernerates the correct url to the specified REST endpoint
+    var getRestPath = function (endpoint) {
+          var searchUrl = '',
+              parts = [];
+
+          // join any indices
+          if (indices.length > 0) {
+            searchUrl = searchUrl + '/' + indices.join();
+          }
+
+          // join any types
+          if (types.length > 0) {
+            searchUrl = searchUrl + '/' + types.join();
+          }
+
+          // add the endpoint
+          if (endpoint.length > 0 && endpoint[0] !== '/') {
+            searchUrl = searchUrl + '/';
+          }
+
+          searchUrl = searchUrl + endpoint;
+
+          for (var p in params) {
+            if (!has(params, p) || params[p] === '') {
+              continue;
+            }
+
+            parts.push(p + '=' + encodeURIComponent(params[p]));
+          }
+
+          if (parts.length > 0) {
+            searchUrl = searchUrl + '?' + parts.join('&');
+          }
+
+          return searchUrl;
+        };
+
+    conf = conf || {};
+    // check if we are searching across any specific indeices
+    if (conf.indices == null) {
+      indices = [];
+    } else if (isString(conf.indices)) {
+      indices = [conf.indices];
+    } else {
+      indices = conf.indices;
+    }
+
+    // check if we are searching across any specific types
+    if (conf.types == null) {
+      types = [];
+    } else if (isString(conf.types)) {
+      types = [conf.types];
+    } else {
+      types = conf.types;
+    }
+
+    // check that an index is specified when a type is
+    // if not, search across _all indices
+    if (indices.length === 0 && types.length > 0) {
+      indices = ["_all"];
+    }
+
+    if (conf.routing != null) {
+      params.routing = conf.routing;
+    }
 
     return {
 
       /**
-            <p>Sets the sorting for the query.  This accepts many input formats.</p>
+       <p>Sets the sorting for the query.  This accepts many input formats.</p>
 
-            <dl>
-                <dd><code>sort()</code> - The current sorting values are returned.</dd>
-                <dd><code>sort(fieldName)</code> - Adds the field to the current list of sorting values.</dd>
-                <dd><code>sort(fieldName, order)</code> - Adds the field to the current list of
-                    sorting with the specified order.  Order must be asc or desc.</dd>
-                <dd><code>sort(ejs.Sort)</code> - Adds the Sort value to the current list of sorting values.</dd>
-                <dd><code>sort(array)</code> - Replaces all current sorting values with values
-                    from the array.  The array must contain only strings and Sort objects.</dd>
-            </dl>
+       <dl>
+       <dd><code>sort()</code> - The current sorting values are returned.</dd>
+       <dd><code>sort(fieldName)</code> - Adds the field to the current list of sorting values.</dd>
+       <dd><code>sort(fieldName, order)</code> - Adds the field to the current list of
+       sorting with the specified order.  Order must be asc or desc.</dd>
+       <dd><code>sort(ejs.Sort)</code> - Adds the Sort value to the current list of sorting values.</dd>
+       <dd><code>sort(array)</code> - Replaces all current sorting values with values
+       from the array.  The array must contain only strings and Sort objects.</dd>
+       </dl>
 
-            <p>Multi-level sorting is supported so the order in which sort fields
-            are added to the query requests is relevant.</p>
+       <p>Multi-level sorting is supported so the order in which sort fields
+       are added to the query requests is relevant.</p>
 
-            <p>It is recommended to use <code>Sort</code> objects when possible.</p>
+       <p>It is recommended to use <code>Sort</code> objects when possible.</p>
 
-            @member ejs.Request
-            @param {String} fieldName The field to be sorted by.
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {String} fieldName The field to be sorted by.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       sort: function () {
         var i, len;
 
@@ -16060,7 +15941,7 @@
         } else if (arguments.length === 2) {
           // handle the case where a single field name and order are passed
           var field = arguments[0],
-            order = arguments[1];
+              order = arguments[1];
 
           if (isString(field) && isString(order)) {
             order = order.toLowerCase();
@@ -16076,13 +15957,13 @@
       },
 
       /**
-           Enables score computation and tracking during sorting.  Be default,
-           when sorting scores are not computed.
+       Enables score computation and tracking during sorting.  Be default,
+       when sorting scores are not computed.
 
-            @member ejs.Request
-            @param {Boolean} trueFalse If scores should be computed and tracked.
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {Boolean} trueFalse If scores should be computed and tracked.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       trackScores: function (trueFalse) {
         if (trueFalse == null) {
           return query.track_scores;
@@ -16093,15 +15974,15 @@
       },
 
       /**
-            A search result set could be very large (think Google). Setting the
-            <code>from</code> parameter allows you to page through the result set
-            by making multiple request. This parameters specifies the starting
-            result/document number point. Combine with <code>size()</code> to achieve paging.
+       A search result set could be very large (think Google). Setting the
+       <code>from</code> parameter allows you to page through the result set
+       by making multiple request. This parameters specifies the starting
+       result/document number point. Combine with <code>size()</code> to achieve paging.
 
-            @member ejs.Request
-            @param {Array} f The offset at which to start fetching results/documents from the result set.
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {Array} f The offset at which to start fetching results/documents from the result set.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       from: function (f) {
         if (f == null) {
           return query.from;
@@ -16112,12 +15993,12 @@
       },
 
       /**
-            Sets the number of results/documents to be returned. This is set on a per page basis.
+       Sets the number of results/documents to be returned. This is set on a per page basis.
 
-            @member ejs.Request
-            @param {Integer} s The number of results that are to be returned by the search.
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {Integer} s The number of results that are to be returned by the search.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       size: function (s) {
         if (s == null) {
           return query.size;
@@ -16128,16 +16009,16 @@
       },
 
       /**
-            A timeout, bounding the request to be executed within the
-            specified time value and bail when expired. Defaults to no timeout.
+       A timeout, bounding the request to be executed within the
+       specified time value and bail when expired. Defaults to no timeout.
 
-            <p>This option is valid during the following operations:
-                <code>search</code> and <code>delete by query</code></p>
+       <p>This option is valid during the following operations:
+       <code>search</code> and <code>delete by query</code></p>
 
-            @member ejs.Request
-            @param {Long} t The timeout value in milliseconds.
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {Long} t The timeout value in milliseconds.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       timeout: function (t) {
         if (t == null) {
           return query.timeout;
@@ -16147,19 +16028,147 @@
         return this;
       },
 
+      /**
+       Sets the shard routing parameter.  Only shards matching routing
+       values will be searched.  Set to an empty string to disable routing.
+       Disabled by default.
+
+       <p>This option is valid during the following operations:
+       <code>search, search shards, count</code> and
+       <code>delete by query</code></p>
+
+       @member ejs.Request
+       @param {String} route The routing values as a comma-separated string.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      routing: function (route) {
+        if (route == null) {
+          return params.routing;
+        }
+
+        params.routing = route;
+        return this;
+      },
 
       /**
-            By default, searches return full documents, meaning every property or field.
-            This method allows you to specify which fields you want returned.
+       <p>Sets the replication mode.</p>
 
-            Pass a single field name and it is appended to the current list of
-            fields.  Pass an array of fields and it replaces all existing
-            fields.
+       <p>Valid values are:</p>
 
-            @member ejs.Request
-            @param {(String|String[])} s The field as a string or fields as array
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       <dl>
+       <dd><code>async</code> - asynchronous replication to slaves</dd>
+       <dd><code>sync</code> - synchronous replication to the slaves</dd>
+       <dd><code>default</code> - the currently configured system default.</dd>
+       </dl>
+
+       <p>This option is valid during the following operations:
+       <code>delete by query</code></p>
+
+       @member ejs.Request
+       @param {String} r The replication mode (async, sync, or default)
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      replication: function (r) {
+        if (r == null) {
+          return params.replication;
+        }
+
+        r = r.toLowerCase();
+        if (r === 'async' || r === 'sync' || r === 'default') {
+          params.replication = r;
+        }
+
+        return this;
+      },
+
+      /**
+       <p>Sets the write consistency.</p>
+
+       <p>Valid values are:</p>
+
+       <dl>
+       <dd><code>one</code> - only requires write to one shard</dd>
+       <dd><code>quorum</code> - requires writes to quorum <code>(N/2 + 1)</code></dd>
+       <dd><code>all</code> - requires write to succeed on all shards</dd>
+       <dd><code>default</code> - the currently configured system default</dd>
+       </dl>
+
+       <p>This option is valid during the following operations:
+       <code>delete by query</code></p>
+
+       @member ejs.Request
+       @param {String} c The write consistency (one, quorum, all, or default)
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      consistency: function (c) {
+        if (c == null) {
+          return params.consistency;
+        }
+
+        c = c.toLowerCase();
+        if (c === 'default' || c === 'one' || c === 'quorum' || c === 'all') {
+          params.consistency = c;
+        }
+
+        return this;
+      },
+
+      /**
+       <p>Sets the search execution type for the request.</p>
+
+       <p>Valid values are:</p>
+
+       <dl>
+       <dd><code>dfs_query_then_fetch</code> - same as query_then_fetch,
+       except distributed term frequencies are calculated first.</dd>
+       <dd><code>dfs_query_and_fetch</code> - same as query_and_fetch,
+       except distributed term frequencies are calculated first.</dd>
+       <dd><code>query_then_fetch</code> - executed against all
+       shards, but only enough information is returned.  When ready,
+       only the relevant shards are asked for the actual document
+       content</dd>
+       <dd><code>query_and_fetch</code> - execute the query on all
+       relevant shards and return the results, including content.</dd>
+       <dd><code>scan</code> - efficiently scroll a large result set</dd>
+       <dd><code>count</code> -  special search type that returns the
+       count that matched the search request without any docs </dd>
+       </dl>
+
+       <p>This option is valid during the following operations:
+       <code>search</code></p>
+
+       @member ejs.Request
+       @param {String} t The search execution type
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      searchType: function (t) {
+        if (t == null) {
+          return params.search_type;
+        }
+
+        t = t.toLowerCase();
+        if (t === 'dfs_query_then_fetch' || t === 'dfs_query_and_fetch' ||
+            t === 'query_then_fetch' || t === 'query_and_fetch' ||
+            t === 'scan' || t === 'count') {
+
+          params.search_type = t;
+        }
+
+        return this;
+      },
+
+      /**
+       By default, searches return full documents, meaning every property or field.
+       This method allows you to specify which fields you want returned.
+
+       Pass a single field name and it is appended to the current list of
+       fields.  Pass an array of fields and it replaces all existing
+       fields.
+
+       @member ejs.Request
+       @param {(String|String[])} s The field as a string or fields as array
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       fields: function (fieldList) {
         if (fieldList == null) {
           return query.fields;
@@ -16181,18 +16190,18 @@
       },
 
       /**
-            Allows to control how the _source field is returned with every hit.
-            By default operations return the contents of the _source field
-            unless you have used the fields parameter or if the _source field
-            is disabled.  Set the includes parameter to false to completely
-            disable returning the source field.
+       Allows to control how the _source field is returned with every hit.
+       By default operations return the contents of the _source field
+       unless you have used the fields parameter or if the _source field
+       is disabled.  Set the includes parameter to false to completely
+       disable returning the source field.
 
-            @member ejs.Request
-            @param {(String|Boolean|String[])} includes The field or list of fields to include as array.
-              Set to a boolean false to disable the source completely.
-            @param {(String|String[])} excludes The  optional field or list of fields to exclude.
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {(String|Boolean|String[])} includes The field or list of fields to include as array.
+       Set to a boolean false to disable the source completely.
+       @param {(String|String[])} excludes The  optional field or list of fields to exclude.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       source: function (includes, excludes) {
         if (includes == null && excludes == null) {
           return query._source;
@@ -16222,13 +16231,13 @@
       },
 
       /**
-            Once a query executes, you can use rescore to run a secondary, more
-            expensive query to re-order the results.
+       Once a query executes, you can use rescore to run a secondary, more
+       expensive query to re-order the results.
 
-            @member ejs.Request
-            @param {Rescore} r The rescore configuration.
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {Rescore} r The rescore configuration.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       rescore: function (r) {
         if (r == null) {
           return query.rescore;
@@ -16244,13 +16253,13 @@
       },
 
       /**
-            Allows you to set the specified query on this search object. This is the
-            query that will be used when the search is executed.
+       Allows you to set the specified query on this search object. This is the
+       query that will be used when the search is executed.
 
-            @member ejs.Request
-            @param {Query} someQuery Any valid <code>Query</code> object.
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {Query} someQuery Any valid <code>Query</code> object.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       query: function (someQuery) {
         if (someQuery == null) {
           return query.query;
@@ -16265,14 +16274,15 @@
       },
 
       /**
-            Allows you to set the specified facet on this request object. Multiple facets can
-            be set, all of which will be returned when the search is executed.
+       Allows you to set the specified facet on this request object. Multiple facets can
+       be set, all of which will be returned when the search is executed.
 
-            @member ejs.Request
-            @param {Facet} facet Any valid <code>Facet</code> object.
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {Facet} facet Any valid <code>Facet</code> object.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       facet: function (facet) {
+
         if (facet == null) {
           return query.facets;
         }
@@ -16284,21 +16294,20 @@
         if (!isFacet(facet)) {
           throw new TypeError('Argument must be a Facet');
         }
-
+        console.log(query);
         extend(query.facets, facet.toJSON());
-
         return this;
       },
 
       /**
-      Add an aggregation.  This method can be called multiple times
-      in order to set multiple nested aggregations that will be executed
-      at the same time as the search request.
+       Add an aggregation.  This method can be called multiple times
+       in order to set multiple nested aggregations that will be executed
+       at the same time as the search request.
 
-      @member ejs.Request
-      @param {Aggregation} agg Any valid <code>Aggregation</code> object.
-      @returns {Object} returns <code>this</code> so that calls can be chained.
-      */
+       @member ejs.Request
+       @param {Aggregation} agg Any valid <code>Aggregation</code> object.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       aggregation: function(agg) {
         if (agg == null) {
           return query.aggs;
@@ -16318,25 +16327,25 @@
       },
 
       /**
-      Add an aggregation.  This method can be called multiple times
-      in order to set multiple nested aggregations that will be executed
-      at the same time as the search request.  Alias for the aggregation method.
+       Add an aggregation.  This method can be called multiple times
+       in order to set multiple nested aggregations that will be executed
+       at the same time as the search request.  Alias for the aggregation method.
 
-      @member ejs.Request
-      @param {Aggregation} agg Any valid <code>Aggregation</code> object.
-      @returns {Object} returns <code>this</code> so that calls can be chained.
-      */
+       @member ejs.Request
+       @param {Aggregation} agg Any valid <code>Aggregation</code> object.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       agg: function(agg) {
         return this.aggregation(agg);
       },
 
       /**
-            Allows you to set a specified filter on this request object.
+       Allows you to set a specified filter on this request object.
 
-            @member ejs.Request
-            @param {Object} filter Any valid <code>Filter</code> object.
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {Object} filter Any valid <code>Filter</code> object.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       filter: function (filter) {
         if (filter == null) {
           return query.filter;
@@ -16351,13 +16360,13 @@
       },
 
       /**
-            Performs highlighting based on the <code>Highlight</code>
-            settings.
+       Performs highlighting based on the <code>Highlight</code>
+       settings.
 
-            @member ejs.Request
-            @param {Highlight} h A valid Highlight object
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {Highlight} h A valid Highlight object
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       highlight: function (h) {
         if (h == null) {
           return query.highlight;
@@ -16372,18 +16381,18 @@
       },
 
       /**
-            Allows you to set the specified suggester on this request object.
-            Multiple suggesters can be set, all of which will be returned when
-            the search is executed.  Global suggestion text can be set by
-            passing in a string vs. a <code>Suggest</code> object.
+       Allows you to set the specified suggester on this request object.
+       Multiple suggesters can be set, all of which will be returned when
+       the search is executed.  Global suggestion text can be set by
+       passing in a string vs. a <code>Suggest</code> object.
 
-            @since elasticsearch 0.90
+       @since elasticsearch 0.90
 
-            @member ejs.Request
-            @param {(String|Suggest)} s A valid Suggest object or a String to
-              set as the global suggest text.
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {(String|Suggest)} s A valid Suggest object or a String to
+       set as the global suggest text.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       suggest: function (s) {
         if (s == null) {
           return query.suggest;
@@ -16405,12 +16414,12 @@
       },
 
       /**
-            Computes a document property dynamically based on the supplied <code>ScriptField</code>.
+       Computes a document property dynamically based on the supplied <code>ScriptField</code>.
 
-            @member ejs.Request
-            @param {ScriptField} oScriptField A valid <code>ScriptField</code>.
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {ScriptField} oScriptField A valid <code>ScriptField</code>.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       scriptField: function (oScriptField) {
         if (oScriptField == null) {
           return query.script_fields;
@@ -16429,13 +16438,147 @@
       },
 
       /**
-            Boosts hits in the specified index by the given boost value.
+       Allows you to set the specified content-types on this request object. This is the
+       set of indices that will be used when the search is executed.
 
-            @member ejs.Request
-            @param {String} index the index to boost
-            @param {Double} boost the boost value
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {Array} typeArray An array of content-type names.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      types: function (typeArray) {
+        if (typeArray == null) {
+          return types;
+        } else if (isString(typeArray)) {
+          types = [typeArray];
+        } else if (isArray(typeArray)) {
+          types = typeArray;
+        } else {
+          throw new TypeError('Argument must be a string or array');
+        }
+
+        // check that an index is specified when a type is
+        // if not, search across _all indices
+        if (indices.length === 0 && types.length > 0) {
+          indices = ["_all"];
+        }
+
+        return this;
+      },
+
+      /**
+       Allows you to set the specified indices on this request object. This is the
+       set of indices that will be used when the search is executed.
+
+       @member ejs.Request
+       @param {Array} indexArray An array of collection names.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      indices: function (indexArray) {
+        if (indexArray == null) {
+          return indices;
+        } else if (isString(indexArray)) {
+          indices = [indexArray];
+        } else if (isArray(indexArray)) {
+          indices = indexArray;
+        } else {
+          throw new TypeError('Argument must be a string or array');
+        }
+
+        // check that an index is specified when a type is
+        // if not, search across _all indices
+        if (indices.length === 0 && types.length > 0) {
+          indices = ["_all"];
+        }
+
+        return this;
+      },
+
+      /**
+       <p>If the operation will run on the local node only</p>
+
+       <p>This option is valid during the following operations:
+       <code>search shards</code></p>
+
+       @member ejs.Request
+       @param {Boolean} trueFalse True to run on local node only
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      local: function (trueFalse) {
+        if (trueFalse == null) {
+          return params.local;
+        }
+
+        params.local = trueFalse;
+        return this;
+      },
+
+      /**
+       <p>Determines what type of indices to exclude from a request.  The
+       value can be one of the following:</p>
+
+       <dl>
+       <dd><code>none</code> - No indices / aliases will be excluded from a request</dd>
+       <dd><code>missing</code> - Indices / aliases that are missing will be excluded from a request</dd>
+       </dl>
+
+       <p>This option is valid during the following operations:
+       <code>search, search shards, count</code> and
+       <code>delete by query</code></p>
+
+       @member ejs.Request
+       @param {String} ignoreType the type of ignore (none or missing).
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      ignoreIndices: function (ignoreType) {
+        if (ignoreType == null) {
+          return params.ignore_indices;
+        }
+
+        ignoreType = ignoreType.toLowerCase();
+        if (ignoreType === 'none' || ignoreType === 'missing') {
+          params.ignore_indices = ignoreType;
+        }
+
+        return this;
+      },
+
+      /**
+       <p>Controls the preference of which shard replicas to execute the search request on.
+       By default, the operation is randomized between the each shard replicas.  The
+       preference can be one of the following:</p>
+
+       <dl>
+       <dd><code>_primary</code> - the operation will only be executed on primary shards</dd>
+       <dd><code>_local</code> - the operation will prefer to be executed on local shards</dd>
+       <dd><code>_only_node:$nodeid</code> - the search will only be executed on node with id $nodeid</dd>
+       <dd><code>custom</code> - any string, will guarentee searches always happen on same node.</dd>
+       </dl>
+
+       <p>This option is valid during the following operations:
+       <code>search, search shards, </code> and <code>count</code></p>
+
+       @member ejs.Request
+       @param {String} perf the preference, any of <code>_primary</code>, <code>_local</code>,
+       <code>_only_:$nodeid</code>, or a custom string value.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      preference: function (perf) {
+        if (perf == null) {
+          return params.preference;
+        }
+
+        params.preference = perf;
+        return this;
+      },
+
+      /**
+       Boosts hits in the specified index by the given boost value.
+
+       @member ejs.Request
+       @param {String} index the index to boost
+       @param {Double} boost the boost value
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       indexBoost: function (index, boost) {
         if (query.indices_boost == null) {
           query.indices_boost = {};
@@ -16450,12 +16593,12 @@
       },
 
       /**
-            Enable/Disable explanation of score for each search result.
+       Enable/Disable explanation of score for each search result.
 
-            @member ejs.Request
-            @param {Boolean} trueFalse true to enable, false to disable
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {Boolean} trueFalse true to enable, false to disable
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       explain: function (trueFalse) {
         if (trueFalse == null) {
           return query.explain;
@@ -16466,12 +16609,12 @@
       },
 
       /**
-            Enable/Disable returning version number for each search result.
+       Enable/Disable returning version number for each search result.
 
-            @member ejs.Request
-            @param {Boolean} trueFalse true to enable, false to disable
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {Boolean} trueFalse true to enable, false to disable
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       version: function (trueFalse) {
         if (trueFalse == null) {
           return query.version;
@@ -16482,12 +16625,12 @@
       },
 
       /**
-            Filters out search results will scores less than the specified minimum score.
+       Filters out search results will scores less than the specified minimum score.
 
-            @member ejs.Request
-            @param {Double} min a positive <code>double</code> value.
-            @returns {Object} returns <code>this</code> so that calls can be chained.
-            */
+       @member ejs.Request
+       @param {Double} min a positive <code>double</code> value.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
       minScore: function (min) {
         if (min == null) {
           return query.min_score;
@@ -16498,26 +16641,106 @@
       },
 
       /**
-            The type of ejs object.  For internal use only.
+       The type of ejs object.  For internal use only.
 
-            @member ejs.Request
-            @returns {String} the type of object
-            */
+       @member ejs.Request
+       @returns {String} the type of object
+       */
       _type: function () {
         return 'request';
       },
 
       /**
-            Retrieves the internal <code>query</code> object. This is typically used by
-            internal API functions so use with caution.
+       Retrieves the internal <code>query</code> object. This is typically used by
+       internal API functions so use with caution.
 
-            @member ejs.Request
-            @returns {String} returns this object's internal object representation.
-            */
-      toJSON: function () {
+       @member ejs.Request
+       @returns {String} returns this object's internal object representation.
+       */
+      _self: function () {
         return query;
-      }
+      },
 
+      /**
+       Executes a delete by query request using the current query.
+
+       @member ejs.Request
+       @param {Function} successcb A callback function that handles the response.
+       @param {Function} errorcb A callback function that handles errors.
+       @returns {Object} Returns a client specific object.
+       */
+      doDeleteByQuery: function (successcb, errorcb) {
+        var queryData = JSON.stringify(query.query);
+
+        // make sure the user has set a client
+        if (ejs.client == null) {
+          throw new Error("No Client Set");
+        }
+
+        return ejs.client.del(getRestPath('_query'), queryData, successcb, errorcb);
+      },
+
+      /**
+       Executes a count request using the current query.
+
+       @member ejs.Request
+       @param {Function} successcb A callback function that handles the count response.
+       @param {Function} errorcb A callback function that handles errors.
+       @returns {Object} Returns a client specific object.
+       */
+      doCount: function (successcb, errorcb) {
+        var queryData = JSON.stringify(query.query);
+
+        // make sure the user has set a client
+        if (ejs.client == null) {
+          throw new Error("No Client Set");
+        }
+
+        return ejs.client.post(getRestPath('_count'), queryData, successcb, errorcb);
+      },
+
+      /**
+       Executes the search.
+
+       @member ejs.Request
+       @param {Function} successcb A callback function that handles the search response.
+       @param {Function} errorcb A callback function that handles errors.
+       @returns {Object} Returns a client specific object.
+       */
+      doSearch: function (successcb, errorcb) {
+        var queryData = JSON.stringify(query);
+
+        // make sure the user has set a client
+        if (ejs.client == null) {
+          throw new Error("No Client Set");
+        }
+
+        return ejs.client.post(getRestPath('_search'), queryData, successcb, errorcb);
+      },
+
+      /**
+       Executes the search request as configured but only returns back
+       the shards and nodes that the search is going to execute on.  This
+       is a cluster admin method.
+
+       @member ejs.Request
+       @param {Function} successcb A callback function that handles the response.
+       @param {Function} errorcb A callback function that handles errors.
+       @returns {Object} Returns a client specific object.
+       */
+      doSearchShards: function (successcb, errorcb) {
+        // make sure the user has set a client
+        if (ejs.client == null) {
+          throw new Error("No Client Set");
+        }
+
+        // we don't need to send in the body data, just use empty string
+        return ejs.client.post(getRestPath('_search_shards'), '', successcb, errorcb);
+      },
+
+      toString : function () {
+        return JSON.stringify(query);
+      }
     };
   };
 
@@ -18005,5 +18228,817 @@
     root.ejs = _ejs;
     return this;
   };
-  
+
+  /**
+   @class
+       <p>The <code>Document</code> object provides an interface for working with
+   Documents.  Some example operations avaiable are storing documents,
+   retreiving documents, updating documents, and deleting documents from an
+   index.</p>
+
+   @name ejs.Document
+
+   @desc
+   Object used to create, replace, update, and delete documents
+
+   <div class="alert-message block-message info">
+   <p>
+   <strong>Tip: </strong>
+   It is not necessary to first create a index or content-type. If either of these
+   do not exist, they will be automatically created when you attempt to store the document.
+   </p>
+   </div>
+
+   @param {String} index The index the document belongs to.
+   @param {String} type The type the document belongs to.
+   @param {String} id The id of the document.  The id is required except
+   for indexing.  If no id is specified during indexing, one will be
+   created for you.
+
+   */
+  ejs.Document = function (index, type, id) {
+
+    var
+        params = {},
+        paramExcludes = ['upsert', 'source', 'script', 'lang', 'params'];
+
+    return {
+
+      /**
+       Sets the index the document belongs to.
+
+       @member ejs.Document
+       @param {String} idx The index name
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      index: function (idx) {
+        if (idx == null) {
+          return index;
+        }
+
+        index = idx;
+        return this;
+      },
+
+      /**
+       Sets the type of the document.
+
+       @member ejs.Document
+       @param {String} t The type name
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      type: function (t) {
+        if (t == null) {
+          return type;
+        }
+
+        type = t;
+        return this;
+      },
+
+      /**
+       Sets the id of the document.
+
+       @member ejs.Document
+       @param {String} i The document id
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      id: function (i) {
+        if (i == null) {
+          return id;
+        }
+
+        id = i;
+        return this;
+      },
+
+      /**
+       <p>Sets the routing value.<p>
+
+       <p>By default, the shard the document is placed on is controlled by using a
+       hash of the document’s id value. For more explicit control, this routing value
+       will be fed into the hash function used by the router.</p>
+
+       <p>This option is valid during the following operations:
+       <code>index, delete, get, and update</code></p>
+
+       @member ejs.Document
+       @param {String} route The routing value
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      routing: function (route) {
+        if (route == null) {
+          return params.routing;
+        }
+
+        params.routing = route;
+        return this;
+      },
+
+      /**
+       <p>Sets parent value for a child document.</p>
+
+       <p>When indexing a child document, the routing value is automatically set to be
+       the same as it’s parent, unless the routing value is explicitly specified
+       using the routing parameter.</p>
+
+       <p>This option is valid during the following operations:
+       <code>index, delete, get, and update.</code></p>
+
+       @member ejs.Document
+       @param {String} parent The parent value
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      parent: function (parent) {
+        if (parent == null) {
+          return params.parent;
+        }
+
+        params.parent = parent;
+        return this;
+      },
+
+      /**
+       <p>Sets timestamp of the document.</p>
+
+       <p>By default the timestamp will be set to the time the docuement was indexed.</p>
+
+       <p>This option is valid during the following operations:
+       <code>index</code> and <code>update</code></p>
+
+       @member ejs.Document
+       @param {String} parent The parent value
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      timestamp: function (ts) {
+        if (ts == null) {
+          return params.timestamp;
+        }
+
+        params.timestamp = ts;
+        return this;
+      },
+
+      /**
+       </p>Sets the documents time to live (ttl).</p>
+
+       The expiration date that will be set for a document with a provided ttl is relative
+       to the timestamp of the document, meaning it can be based on the time of indexing or
+       on any time provided.</p>
+
+       <p>The provided ttl must be strictly positive and can be a number (in milliseconds)
+       or any valid time value such as <code>"1d", "2h", "5m",</code> etc.</p>
+
+       <p>This option is valid during the following operations:
+       <code>index</code> and <code>update</code></p>
+
+       @member ejs.Document
+       @param {String} length The amount of time after which the document
+       will expire.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      ttl: function (length) {
+        if (length == null) {
+          return params.ttl;
+        }
+
+        params.ttl = length;
+        return this;
+      },
+
+      /**
+       <p>Set's a timeout for the given operation.</p>
+
+       If the primary shard has not completed the operation before this value, an error will
+       occur.  The default timeout is 1 minute. The provided timeout must be strictly positive
+       and can be a number (in milliseconds) or any valid time value such as
+       <code>"1d", "2h", "5m",</code> etc.</p>
+
+       <p>This option is valid during the following operations:
+       <code>index, delete,</code> and <code>update</code></p>
+
+       @member ejs.Document
+       @param {String} length The amount of time after which the operation
+       will timeout.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      timeout: function (length) {
+        if (length == null) {
+          return params.timeout;
+        }
+
+        params.timeout = length;
+        return this;
+      },
+
+      /**
+       <p>Enables the index to be refreshed immediately after the operation
+       occurs. This is an advanced setting and can lead to performance
+       issues.</p>
+
+       <p>This option is valid during the following operations:
+       <code>index, delete, get,</code> and <code>update</code></p>
+
+       @member ejs.Document
+       @param {Boolean} trueFalse If the index should be refreshed or not.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      refresh: function (trueFalse) {
+        if (trueFalse == null) {
+          return params.refresh;
+        }
+
+        params.refresh = trueFalse;
+        return this;
+      },
+
+      /**
+       <p>Sets the document version.</p>
+
+       Used for optimistic concurrency control when set.  If the version of the currently
+       indexed document is less-than or equal to the version specified, an error is produced,
+       otherwise the operation is permitted.</p>
+
+       <p>By default, internal versioning is used that starts at <code>1</code> and
+       increments with each update.</p>
+
+       <p>This option is valid during the following operations:
+       <code>get, index, delete,</code> and <code>update</code></p>
+
+       @member ejs.Document
+       @param {Long} version A positive long value
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      version: function (version) {
+        if (version == null) {
+          return params.version;
+        }
+
+        params.version = version;
+        return this;
+      },
+
+      /**
+       <p>Sets the version type.</p>
+
+       </p>Possible values are:</p>
+
+       <dl>
+       <dd><code>internal</code> - the default</dd>
+       <dd><code>external</code> - to use your own version (ie. version number from a database)</dd>
+       </dl>
+
+       <p>This option is valid during the following operations:
+       <code>get, index, delete,</code> and <code>update</code></p>
+
+       @member ejs.Document
+       @param {String} vt A version type (internal or external)
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      versionType: function (vt) {
+        // internal or external
+        if (vt == null) {
+          return params.version_type;
+        }
+
+        vt = vt.toLowerCase();
+        if (vt === 'internal' || vt === 'external') {
+          params.version_type = vt;
+        }
+
+        return this;
+      },
+
+      /**
+       <p>Sets the indexing operation type.</p>
+
+       <p>Valid values are:</p>
+
+       <dl>
+       <dd><code>index</code> - the default, create or replace</dd>
+       <dd><code>create</code> - create only</dd>
+       </dl>
+
+       <p>This option is valid during the following operations:
+       <code>index</code></p>
+
+       @member ejs.Document
+       @param {String} op The operation type (index or create)
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      opType: function (op) {
+        if (op == null) {
+          return params.op_type;
+        }
+
+        op = op.toLowerCase();
+        if (op === 'index' || op === 'create') {
+          params.op_type = op;
+        }
+
+        return this;
+      },
+
+      /**
+       <p>Sets the replication mode.</p>
+
+       <p>Valid values are:</p>
+
+       <dl>
+       <dd><code>async</code> - asynchronous replication to slaves</dd>
+       <dd><code>sync</code> - synchronous replication to the slaves</dd>
+       <dd><code>default</code> - the currently configured system default.</dd>
+       </dl>
+
+       <p>This option is valid during the following operations:
+       <code>index, delete,</code> and <code>update</code></p>
+
+       @member ejs.Document
+       @param {String} r The replication mode (async, sync, or default)
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      replication: function (r) {
+        if (r == null) {
+          return params.replication;
+        }
+
+        r = r.toLowerCase();
+        if (r === 'async' || r === 'sync' || r === 'default') {
+          params.replication = r;
+        }
+
+        return this;
+      },
+
+      /**
+       <p>Sets the write consistency.</p>
+
+       <p>Valid values are:</p>
+
+       <dl>
+       <dd><code>one - only requires write to one shard</dd>
+       <dd><code>quorum - requires writes to quorum <code>(N/2 + 1)</code></dd>
+       <dd><code>all - requires write to succeed on all shards</dd>
+       <dd><code>default - the currently configured system default</dd>
+       </dl>
+
+       <p>This option is valid during the following operations:
+       <code>index, delete,</code> and <code>update</code></p>
+
+       @member ejs.Document
+       @param {String} c The write consistency (one, quorum, all, or default)
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      consistency: function (c) {
+        if (c == null) {
+          return params.consistency;
+        }
+
+        c = c.toLowerCase();
+        if (c === 'default' || c === 'one' || c === 'quorum' || c === 'all') {
+          params.consistency = c;
+        }
+
+        return this;
+      },
+
+      /**
+       <p>Sets the preference of which shard replicas to execute the get
+       request on.</p>
+
+       <p>By default, the operation is randomized between the shard replicas.
+       This value can be:</p>
+
+       <dl>
+       <dd><code>_primary</code> - execute only on the primary shard</dd>
+       <dd><code>_local</code> - the local shard if possible</dd>
+       <dd><code>any string value</code> - to guarentee the same shards will always be used</dd>
+       </dl>
+
+       <p>This option is valid during the following operations:
+       <code>get</code></p>
+
+       @member ejs.Document
+       @param {String} p The preference value as a string
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      preference: function (p) {
+        if (p == null) {
+          return params.preference;
+        }
+
+        params.preference = p;
+        return this;
+      },
+
+      /**
+       <p>Sets if the get request is performed in realtime or waits for
+       the indexing operations to complete.  By default it is realtime.</p>
+
+       <p>This option is valid during the following operations:
+       <code>get</code></p>
+
+       @member ejs.Document
+       @param {Boolean} trueFalse If realtime get is used or not.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      realtime: function (trueFalse) {
+        if (trueFalse == null) {
+          return params.realtime;
+        }
+
+        params.realtime = trueFalse;
+        return this;
+      },
+
+      /**
+       <p>Sets the fields of the document to return.</p>
+
+       <p>By default the <code>_source</code> field is returned.  Pass a single value
+       to append to the current list of fields, pass an array to overwrite the current
+       list of fields.  The returned fields will either be loaded if they are stored,
+       or fetched from the <code>_source</code></p>
+
+       <p>This option is valid during the following operations:
+       <code>get</code> and <code>update</code></p>
+
+       @member ejs.Document
+       @param {String || Array} fields a single field name or array of field names.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      fields: function (fields) {
+        if (params.fields == null) {
+          params.fields = [];
+        }
+
+        if (fields == null) {
+          return params.fields;
+        }
+
+        if (isString(fields)) {
+          params.fields.push(fields);
+        } else if (isArray(fields)) {
+          params.fields = fields;
+        } else {
+          throw new TypeError('Argument must be string or array');
+        }
+
+        return this;
+      },
+
+      /**
+       <p>Sets the update script.</p>
+
+       <p>This option is valid during the following operations:
+       <code>update</code></p>
+
+       @member ejs.Document
+       @param {String} script a script to use for docuement updates
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      script: function (script) {
+        if (script == null) {
+          return params.script;
+        }
+
+        params.script = script;
+        return this;
+      },
+
+      /**
+       <p>Sets the update script lanauge.  Defaults to <code>mvel</code></p>.
+
+       <p>This option is valid during the following operations:
+       <code>update</code></p>
+
+       @member ejs.Document
+       @param {String} lang a valid script lanauge type such as mvel.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      lang: function (lang) {
+        if (lang == null) {
+          return params.lang;
+        }
+
+        params.lang = lang;
+        return this;
+      },
+
+      /**
+       <p>Sets the parameters sent to the update script.</p>
+
+       <p>The params must be an object where the key is the parameter name and
+       the value is the parameter value to use in the script.</p>
+
+       <p>This option is valid during the following operations:
+       <code>update</code></p>
+
+       @member ejs.Document
+       @param {Object} p a object with script parameters.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      params: function (p) {
+        // accept object, prefix keys as sp_{key}
+        if (p == null) {
+          return params.params;
+        }
+
+        if (!isObject(p)) {
+          throw new TypeError('Argument must be an object');
+        }
+
+        params.params = p;
+        return this;
+      },
+
+      /**
+       <p>Sets how many times to retry if there is a version conflict
+       between getting the document and indexing / deleting it.</p>
+
+       <p>Defaults to <code>0</code>.<p>
+
+       <p>This option is valid during the following operations:
+       <code>update</code></p>
+
+       @member ejs.Document
+       @param {Integer} num the number of times to retry operation.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      retryOnConflict: function (num) {
+        if (num == null) {
+          return params.retry_on_conflict;
+        }
+
+        params.retry_on_conflict = num;
+        return this;
+      },
+
+      /**
+       <p>Sets the upsert document.</p>
+
+       <p>The upsert document is used during updates when the specified document
+       you are attempting to update does not exist.</p>
+
+       <p>This option is valid during the following operations:
+       <code>update</code></p>
+
+       @member ejs.Document
+       @param {Object} doc the upset document.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      upsert: function (doc) {
+        if (doc == null) {
+          return params.upsert;
+        }
+
+        if (!isObject(doc)) {
+          throw new TypeError('Argument must be an object');
+        }
+
+        params.upsert = doc;
+        return this;
+      },
+
+      /**
+       <p>Sets if doc (source) should be used for the upsert value.</p>
+
+       <p>This option is valid during the following operations:
+       <code>update</code></p>
+
+       @member ejs.Document
+       @param {Boolean} trueFalse If realtime get is used or not.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      docAsUpsert: function (trueFalse) {
+        if (trueFalse == null) {
+          return params.doc_as_upsert;
+        }
+
+        params.doc_as_upsert = trueFalse;
+        return this;
+      },
+
+      /**
+       <p>Sets the source document.</p>
+
+       <p>When set during an update operation, it is used as the partial update document.</p>
+
+       <p>This option is valid during the following operations:
+       <code>index</code> and <code>update</code></p>
+
+       @member ejs.Document
+       @param {Object} doc the source document.
+       @returns {Object} returns <code>this</code> so that calls can be chained.
+       */
+      source: function (doc) {
+        if (doc == null) {
+          return params.source;
+        }
+
+        if (!isObject(doc)) {
+          throw new TypeError('Argument must be an object');
+        }
+
+        params.source = doc;
+        return this;
+      },
+
+      /**
+       <p>Allows you to serialize this object into a JSON encoded string.</p>
+
+       @member ejs.Document
+       @returns {String} returns this object as a serialized JSON string.
+       */
+      toString: function () {
+        return JSON.stringify(params);
+      },
+
+      /**
+       <p>The type of ejs object.  For internal use only.</p>
+
+       @member ejs.Document
+       @returns {String} the type of object
+       */
+      _type: function () {
+        return 'document';
+      },
+
+      /**
+       <p>Retrieves the internal <code>document</code> object. This is
+       typically used by internal API functions so use with caution.</p>
+
+       @member ejs.Document
+       @returns {Object} returns this object's internal object.
+       */
+      _self: function () {
+        return params;
+      },
+
+      /**
+       <p>Retrieves a document from the given index and type.</p>
+
+       @member ejs.Document
+       @param {Function} successcb A callback function that handles the response.
+       @param {Function} errorcb A callback function that handles errors.
+       @returns {Object} The return value is dependent on client implementation.
+       */
+      doGet: function (successcb, errorcb) {
+        // make sure the user has set a client
+        if (ejs.client == null) {
+          throw new Error("No Client Set");
+        }
+
+        if (index == null || type == null || id == null) {
+          throw new Error('Index, Type, and ID must be set');
+        }
+
+        // we don't need to convert the client params to a string
+        // on get requests, just create the url and pass the client
+        // params as the data
+        var url = '/' + index + '/' + type + '/' + id;
+
+        return ejs.client.get(url, genClientParams(params, paramExcludes),
+            successcb, errorcb);
+      },
+
+      /**
+       <p>Stores a document in the given index and type.  If no id
+       is set, one is created during indexing.</p>
+
+       @member ejs.Document
+       @param {Function} successcb A callback function that handles the response.
+       @param {Function} errorcb A callback function that handles errors.
+       @returns {Object} The return value is dependent on client implementation.
+       */
+      doIndex: function (successcb, errorcb) {
+        // make sure the user has set a client
+        if (ejs.client == null) {
+          throw new Error("No Client Set");
+        }
+
+        if (index == null || type == null) {
+          throw new Error('Index and Type must be set');
+        }
+
+        if (params.source == null) {
+          throw new Error('No source document found');
+        }
+
+        var url = '/' + index + '/' + type,
+            data = JSON.stringify(params.source),
+            paramStr = genParamStr(params, paramExcludes),
+            response;
+
+        if (id != null) {
+          url = url + '/' + id;
+        }
+
+        if (paramStr !== '') {
+          url = url + '?' + paramStr;
+        }
+
+        // do post if id not set so one is created
+        if (id == null) {
+          response = ejs.client.post(url, data, successcb, errorcb);
+        } else {
+          // put when id is specified
+          response = ejs.client.put(url, data, successcb, errorcb);
+        }
+
+        return response;
+      },
+
+      /**
+       <p>Updates a document in the given index and type.</p>
+
+       <p>If the document is not found in the index, the "upsert" value is used
+       if set.  The document is updated via an update script or partial document.</p>
+
+       <p>To use a script, set the script option, to use a
+       partial document, set the source with the partial document.</p>
+
+       @member ejs.Document
+       @param {Function} successcb A callback function that handles the response.
+       @param {Function} errorcb A callback function that handles errors.
+       @returns {Object} The return value is dependent on client implementation.
+       */
+      doUpdate: function (successcb, errorcb) {
+        // make sure the user has set a client
+        if (ejs.client == null) {
+          throw new Error("No Client Set");
+        }
+
+        if (index == null || type == null || id == null) {
+          throw new Error('Index, Type, and ID must be set');
+        }
+
+        if (params.script == null && params.source == null) {
+          throw new Error('Update script or document required');
+        }
+
+        var url = '/' + index + '/' + type + '/' + id + '/_update',
+            data = {},
+            paramStr = genParamStr(params, paramExcludes);
+
+        if (paramStr !== '') {
+          url = url + '?' + paramStr;
+        }
+
+        if (params.script != null) {
+          data.script = params.script;
+        }
+
+        if (params.lang != null) {
+          data.lang = params.lang;
+        }
+
+        if (params.params != null) {
+          data.params = params.params;
+        }
+
+        if (params.upsert != null) {
+          data.upsert = params.upsert;
+        }
+
+        if (params.source != null) {
+          data.doc = params.source;
+        }
+
+        return ejs.client.post(url, JSON.stringify(data), successcb, errorcb);
+      },
+
+      /**
+       <p>Deletes the document from the given index and type using the
+       speciifed id.</p>
+
+       @member ejs.Document
+       @param {Function} successcb A callback function that handles the response.
+       @param {Function} errorcb A callback function that handles errors.
+       @returns {void} Returns the value of the callback when executing on the server.
+       */
+      doDelete: function (successcb, errorcb) {
+        // make sure the user has set a client
+        if (ejs.client == null) {
+          throw new Error("No Client Set");
+        }
+
+        if (index == null || type == null || id == null) {
+          throw new Error('Index, Type, and ID must be set');
+        }
+
+        var url = '/' + index + '/' + type + '/' + id,
+            data = '',
+            paramStr = genParamStr(params, paramExcludes);
+
+        if (paramStr !== '') {
+          url = url + '?' + paramStr;
+        }
+
+        return ejs.client.del(url, data, successcb, errorcb);
+      }
+
+    };
+  };
+
+
 }).call(this);
