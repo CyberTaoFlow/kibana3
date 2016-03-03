@@ -128,7 +128,7 @@ function (angular, app, _, $, kbn) {
       /** @scratch /panels/terms/5
        * tstat:: Terms_stats aggregation stats field
        */
-      tstat       : 'total',
+      tstat       : 'count',
       /** @scratch /panels/terms/5
        * valuefield:: Terms_stats aggregation value field
        */
@@ -279,7 +279,7 @@ function (angular, app, _, $, kbn) {
     };
 
     $scope.showMeta = function(term) {
-      if(_.isUndefined(term.meta)) {
+      if(_.isUndefined(term) || _.isUndefined(term.meta)) {
         return true;
       }
       if(term.meta === 'other' && !$scope.panel.other) {
