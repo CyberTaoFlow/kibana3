@@ -108,7 +108,7 @@ define([
 
     $scope.makeAlias = function (q) {
       var alias = q.alias || q.query;
-      return btoa(unescape(encodeURIComponent('stats_' + alias)));
+      return btoa($scope.unescape(encodeURIComponent('stats_' + alias)));
     };
 
     $scope.get_data = function () {
@@ -131,26 +131,26 @@ define([
 
       // This could probably be changed to a BoolFilter
       _.each(queries,function(q) {
-        filter = filter.should(ejs.QueryFilter(querySrv.toEjsObj(q)));
+        filter = filter.should($scope.ejs.QueryFilter(querySrv.toEjsObj(q)));
       });
 
       request = request
         .size(0)
-        .agg(ejs.FilterAggregation('stats')
+        .agg($scope.ejs.FilterAggregation('stats')
           .filter(filter)
-          .agg(ejs.ExtendedStatsAggregation('stats')
+          .agg($scope.ejs.ExtendedStatsAggregation('stats')
             .field($scope.panel.field)));
 
       _.each(queries, function (q) {
         var aliasName = $scope.makeAlias(q);
-        var aggr = ejs.ExtendedStatsAggregation('stats')
+        var aggr = $scope.ejs.ExtendedStatsAggregation('stats')
           .field($scope.panel.field);
         var filter = filterSrv.getBoolFilter(filterSrv.ids())
-          .must(ejs.QueryFilter(querySrv.toEjsObj(q)));
+          .must($scope.ejs.QueryFilter(querySrv.toEjsObj(q)));
 
         request = request
           .size(0)
-          .agg(ejs.FilterAggregation(aliasName)
+          .agg($scope.ejs.FilterAggregation(aliasName)
             .filter(filter)
             .agg(aggr));
       });

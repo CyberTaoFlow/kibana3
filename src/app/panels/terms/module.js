@@ -149,36 +149,36 @@ function (angular, app, _, $, kbn) {
 
     $scope.prepareOrder = function(aggregation) {
         switch ($scope.panel.order) {
-            case 'term':
-                return aggregation.order('_term', 'desc');
-            case 'reverse_unique':
-                return aggregation.order('unique', 'asc');
-            case 'unique':
-                return aggregation.order('unique', 'desc');
-            case 'reverse_count':
-                return aggregation.order('_count', 'asc');
-            case 'reverse_term':
-                return aggregation.order('_term', 'asc');
-            case 'sum':
-                return aggregation.order('stats.sum', 'desc');
-            case 'reverse_sum':
-                return aggregation.order('stats.sum', 'asc');
-            case 'avg':
-                return aggregation.order('stats.avg', 'desc');
-            case 'reverse_avg':
-                return aggregation.order('stats.avg', 'asc');
-            case 'min':
-                return aggregation.order('stats.min', 'desc');
-            case 'reverse_min':
-                return aggregation.order('stats.avg', 'asc');
-            case 'max':
-                return aggregation.order('stats.max', 'desc');
-            case 'reverse_max':
-                return aggregation.order('stats.avg', 'asc');
-            default :
-                return aggregation.order('_count', 'desc');
+        case 'term':
+          return aggregation.order('_term', 'desc');
+        case 'reverse_unique':
+          return aggregation.order('unique', 'asc');
+        case 'unique':
+          return aggregation.order('unique', 'desc');
+        case 'reverse_count':
+          return aggregation.order('_count', 'asc');
+        case 'reverse_term':
+          return aggregation.order('_term', 'asc');
+        case 'sum':
+          return aggregation.order('stats.sum', 'desc');
+        case 'reverse_sum':
+          return aggregation.order('stats.sum', 'asc');
+        case 'avg':
+          return aggregation.order('stats.avg', 'desc');
+        case 'reverse_avg':
+          return aggregation.order('stats.avg', 'asc');
+        case 'min':
+          return aggregation.order('stats.min', 'desc');
+        case 'reverse_min':
+          return aggregation.order('stats.avg', 'asc');
+        case 'max':
+          return aggregation.order('stats.max', 'desc');
+        case 'reverse_max':
+          return aggregation.order('stats.avg', 'asc');
+        default :
+          return aggregation.order('_count', 'desc');
         }
-    };
+      };
     
     $scope.get_data = function() {
       // Make sure we have everything for the request to complete
@@ -208,7 +208,7 @@ function (angular, app, _, $, kbn) {
 
       // Terms mode
       if($scope.panel.tmode === 'terms') {
-            request = request
+        request = request
              .size(0)
              .query(boolQuery)
              .agg($scope.ejs.FilterAggregation('filters')
@@ -221,10 +221,10 @@ function (angular, app, _, $, kbn) {
 
       }
       if($scope.panel.tmode === 'terms_stats') {
-          var statsAggregationType = $scope.ejs.StatsAggregation('stats')
+        var statsAggregationType = $scope.ejs.StatsAggregation('stats')
                                         .field($scope.panel.valuefield);
 
-             request = request
+        request = request
               .size(0)
               .query(boolQuery)
               .agg($scope.ejs.FilterAggregation('filters')
@@ -328,10 +328,10 @@ function (angular, app, _, $, kbn) {
                   _.each(scope.results.aggregations.filters.field.buckets, function (v) {
                       var slice;
                       if (scope.panel.tmode === 'terms') {
-                          slice = {label: v.key, data: [[k, v.doc_count]], actions: true};
+                        slice = {label: v.key, data: [[k, v.doc_count]], actions: true};
                       }
                       else if (scope.panel.tmode === 'terms_stats' ) {
-                          slice = {label: v.key, data: [[k, v.stats[scope.panel.tstat]]], actions: true};
+                        slice = {label: v.key, data: [[k, v.stats[scope.panel.tstat]]], actions: true};
                       }
                       else if (scope.panel.tmode === 'unique' ) {
                         slice = {label: v.key, data: [[k, v.unique['value']]], actions: true};
@@ -339,27 +339,30 @@ function (angular, app, _, $, kbn) {
 
                       scope.data.push(slice);
                       k = k + 1;
-                  });
+                    });
 
                   scope.data.push({
                       label: 'Missing field',
-                      data: [[k, 'unknown']], meta: "missing", color: '#aaa', opacity: 0
-                  });
+                      data: [[k, 'unknown']], 
+                      meta: "missing", 
+                      color: '#aaa', 
+                      opacity: 0
+                    });
 
                   if (scope.panel.tmode === 'terms') {
-                      scope.data.push({
-                          label: 'Other values',
-                          data: [[k + 1, scope.results.aggregations.filters.field.sum_other_doc_count]],
-                          meta: "other",
-                          color: '#444'
-                      });
+                    scope.data.push({
+                      label: 'Other values',
+                      data: [[k + 1, scope.results.aggregations.filters.field.sum_other_doc_count]],
+                      meta: "other",
+                      color: '#444'
+                    });
                   }
-              } catch (e) {
+                } catch (e) {
                   // when you change from terms to terms stats it is doing that with scope.panel.tmode === 'terms_stats'
                   // but still data for ordinary terms i do not know how to fix that so the try and catch for now
-                  p(e);
+                console.error(e);
               }
-          }
+            }
           
         // Receive render events
         scope.$on('render',function(){
