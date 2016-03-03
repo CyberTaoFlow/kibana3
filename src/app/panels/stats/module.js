@@ -55,7 +55,7 @@ define([
       description: 'A statistical panel for displaying aggregations using the Elastic Search statistical facet query.'
     };
 
-    $scope.modes = ['count','min','max','mean','total','variance','std_deviation','sum_of_squares'];
+    $scope.modes = ['count','min','max','avg','sum','variance','std_deviation','sum_of_squares'];
 
     var defaults = {
       queries     : {
@@ -106,6 +106,11 @@ define([
       }
     };
 
+    $scope.makeAlias = function (q) {
+      var alias = q.alias || q.query;
+      return btoa(unescape(encodeURIComponent('stats_' + alias)));
+    };
+
     $scope.get_data = function () {
       if(dashboard.indices.length === 0) {
         return;
@@ -115,7 +120,6 @@ define([
 
       var request,
         results,
-        boolQuery,
         queries;
 
       request = $scope.ejs.Request().indices(dashboard.indices);
@@ -123,35 +127,32 @@ define([
       $scope.panel.queries.ids = querySrv.idsByMode($scope.panel.queries);
       queries = querySrv.getQueryObjs($scope.panel.queries.ids);
 
+      var filter = filterSrv.getBoolFilter(filterSrv.ids());
 
       // This could probably be changed to a BoolFilter
-      boolQuery = $scope.ejs.BoolQuery();
       _.each(queries,function(q) {
-        boolQuery = boolQuery.should(querySrv.toEjsObj(q));
+        filter = filter.should(ejs.QueryFilter(querySrv.toEjsObj(q)));
       });
 
       request = request
-        .facet($scope.ejs.StatisticalFacet('stats')
-          .field($scope.panel.field)
-          .facetFilter($scope.ejs.QueryFilter(
-            $scope.ejs.FilteredQuery(
-              boolQuery,
-              filterSrv.getBoolFilter(filterSrv.ids())
-              )))).size(0);
+        .size(0)
+        .agg(ejs.FilterAggregation('stats')
+          .filter(filter)
+          .agg(ejs.ExtendedStatsAggregation('stats')
+            .field($scope.panel.field)));
 
       _.each(queries, function (q) {
-        var alias = q.alias || q.query;
-        var query = $scope.ejs.BoolQuery();
-        query.should(querySrv.toEjsObj(q));
-        request.facet($scope.ejs.StatisticalFacet('stats_'+alias)
-          .field($scope.panel.field)
-          .facetFilter($scope.ejs.QueryFilter(
-            $scope.ejs.FilteredQuery(
-              query,
-              filterSrv.getBoolFilter(filterSrv.ids())
-            )
-          ))
-        );
+        var aliasName = $scope.makeAlias(q);
+        var aggr = ejs.ExtendedStatsAggregation('stats')
+          .field($scope.panel.field);
+        var filter = filterSrv.getBoolFilter(filterSrv.ids())
+          .must(ejs.QueryFilter(querySrv.toEjsObj(q)));
+
+        request = request
+          .size(0)
+          .agg(ejs.FilterAggregation(aliasName)
+            .filter(filter)
+            .agg(aggr));
       });
 
       // Populate the inspector panel
@@ -161,15 +162,16 @@ define([
 
       results.then(function(results) {
         $scope.panelMeta.loading = false;
-        var value = results.facets.stats[$scope.panel.mode];
+        var value = results.aggregations.stats.stats[$scope.panel.mode];
 
         var rows = queries.map(function (q) {
           var alias = q.alias || q.query;
+          var aliasName = $scope.makeAlias(q);
           var obj = _.clone(q);
           obj.label = alias;
           obj.Label = alias.toLowerCase(); //sort field
-          obj.value = results.facets['stats_'+alias];
-          obj.Value = results.facets['stats_'+alias]; //sort field
+          obj.value = results.aggregations[aliasName].stats;
+          obj.Value = results.aggregations[aliasName].stats; //sort field
           return obj;
         });
 
@@ -177,8 +179,6 @@ define([
           value: value,
           rows: rows
         };
-
-        console.log($scope.data);
 
         $scope.$emit('render');
       });
