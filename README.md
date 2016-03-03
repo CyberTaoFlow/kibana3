@@ -1,8 +1,13 @@
-# Kibana
+# Kibana3 With Support for Elasticsearch Aggregations and Version 2.x
 
-__NOTE__: You have reached the Kibana 3 repository.
-Kibana 3 is a completely new version of Kibana written entirely in HTML and Javascript. You can find
-the Kibana 2 repository at [https://github.com/rashidkpc/Kibana](https://github.com/rashidkpc/Kibana)
+
+__NOTE__: You have reached a forked Kibana 3 repository created with the intent to be compatible with Elasticsearch 
+version 2.x. Support has been added to remove the deprecated facets approach and leverage the power of Elasticsearch 
+aggregations instead.  While Kibana 4 is a powerful analytics tool there is something to be said for the simplicity and 
+ease of data exploration in Kibana 3 while also allowing for rapid creation of visualizations. This is an ongoing project 
+to allow Kibana 3 features to remain compatible with the evolution of Elasticsearch itself.
+ 
+You can find the Kibana 3 community repository at [https://github.com/kibana-community/kibana3](https://github.com/kibana-community/kibana3)
 
 More information about Kibana 3 can be found at [http://www.elasticsearch.org/overview/kibana/](http://www.elasticsearch.org/overview/kibana/)
 
@@ -14,7 +19,7 @@ setup and start using (seriously). Kibana strives to be easy to get started with
 flexible and powerful
 
 ### Requirements
-* Elasticsearch 0.90.9 or above
+* Elasticsearch 1.1 or above
 * A modern web browser. The latest version of Chrome, Safari and Firefox have all been tested to
 work. IE9 and greater should work. IE8 does not.
 * A webserver. No extensions are required, as long as it can serve plain html it will work
