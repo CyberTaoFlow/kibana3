@@ -117,17 +117,20 @@ define([
 
       $scope.panel.queries.ids = querySrv.idsByMode($scope.panel.queries);
       var queries = querySrv.getQueryObjs($scope.panel.queries.ids);
-
+      var filter = filterSrv.getBoolFilter(filterSrv.ids());
+      
       // Build the question part of the query
       _.each(queries, function(q) {
         var _q = $scope.ejs.FilteredQuery(
           querySrv.toEjsObj(q),
           filterSrv.getBoolFilter(filterSrv.ids()));
 
-        request = request
-          .facet($scope.ejs.QueryFacet(q.id)
-            .query(_q)
-          ).size(0);
+      request = request
+        .size(0)
+        .agg($scope.ejs.FilterAggregation('stats')
+          .filter(filter)
+          .agg($scope.ejs.ExtendedStatsAggregation('stats')
+            .field($scope.panel.field)));
       });
 
       // Populate the inspector panel
