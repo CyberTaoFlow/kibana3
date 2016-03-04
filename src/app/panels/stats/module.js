@@ -1,3 +1,4 @@
+/* global unescape */
 /*
 
   ## Stats Module
@@ -108,7 +109,7 @@ define([
 
     $scope.makeAlias = function (q) {
       var alias = q.alias || q.query;
-      return btoa($scope.unescape(encodeURIComponent('stats_' + alias)));
+      return btoa(unescape(encodeURIComponent('stats_' + alias)));
     };
 
     $scope.get_data = function () {
