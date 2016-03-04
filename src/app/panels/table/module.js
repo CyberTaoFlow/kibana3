@@ -165,14 +165,14 @@ function (angular, app, _, kbn, moment) {
     // Create a percent function for the view
     $scope.percent = kbn.to_percent;
 
-    $scope.closeFacet = function() {
+    $scope.closeAggregation = function() {
       if($scope.modalField) {
         delete $scope.modalField;
       }
     };
 
     $scope.termsModal = function(field,chart) {
-      $scope.closeFacet();
+      $scope.closeAggregation();
       $timeout(function() {
         $scope.modalField = field;
         $scope.adhocOpts = {
@@ -189,7 +189,7 @@ function (angular, app, _, kbn, moment) {
     };
 
     $scope.statsModal = function(field) {
-      $scope.closeFacet();
+      $scope.closeAggregation();
       $timeout(function() {
         $scope.modalField = field;
         $scope.adhocOpts = {
@@ -206,8 +206,8 @@ function (angular, app, _, kbn, moment) {
     };
 
     var showModal = function(panel,type) {
-      $scope.facetPanel = panel;
-      $scope.facetType = type;
+      $scope.aggregationPanel = panel;
+      $scope.aggregationType = type;
     };
 
     $scope.toggle_micropanel = function(field,groups) {

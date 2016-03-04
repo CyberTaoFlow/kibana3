@@ -48,7 +48,7 @@
       white-space: pre-wrap;
     }
 
-    .table-facet {
+    .table-aggregation {
       padding: 10px;
       border: 1px solid #666;
     }
@@ -98,9 +98,9 @@
     <div ng-class="{'table-main':panel.field_list}" class="table-doc-table">
 
       <div style="{{panel.overflow}}:{{panel.height||row.height}};overflow-y:auto">
-        <div class="table-facet" ng-if="modalField">
+        <div class="table-aggregation" ng-if="modalField">
           <h4>
-            <button class="btn btn-mini btn-danger" ng-click="closeFacet();">close</button>
+            <button class="btn btn-mini btn-danger" ng-click="closeAggregation();">close</button>
             {{adhocOpts.title}}
             <span class="pointer ng-scope ng-pristine ng-valid ui-draggable" bs-tooltip="'Drag to add to dashboard'"
               data-drag="true"
@@ -111,7 +111,7 @@
               title=""
               aria-disabled="false" style="position: relative;"><i class="icon-move"></i></span>
           </h4>
-          <kibana-simple-panel type="'{{facetType}}'" panel='{{facetPanel}}' ng-cloak></kibana-simple-panel>
+          <kibana-simple-panel type="'{{aggregationType}}'" panel='{{aggregationPanel}}' ng-cloak></kibana-simple-panel>
         </div>
 
         <i class="pull-left icon-chevron-sign-right pointer" ng-click="panel.field_list = !panel.field_list" bs-tooltip="'Show field list'" ng-show="!panel.field_list"></i>
