@@ -66,7 +66,7 @@ function (angular, app, $, _, kbn, moment, timeSeries, numeral) {
       ],
       status  : "Stable",
       description : "A bucketed time series chart of the current query or queries. Uses the "+
-        "Elasticsearch date_histogram facet. If using time stamped indices this panel will query"+
+        "Elasticsearch date_histogram aggregation. If using time stamped indices this panel will query"+
         " them sequentially to attempt to apply the lighest possible load to your Elasticsearch cluster"
     };
 
@@ -351,25 +351,27 @@ function (angular, app, $, _, kbn, moment, timeSeries, numeral) {
 
       // Build the query
       _.each(queries, function(q) {
-        var query = $scope.ejs.FilteredQuery(
-          querySrv.toEjsObj(q),
-          filterSrv.getBoolFilter(filterSrv.ids())
-        );
+        var aggr = $scope.ejs.DateHistogramAggregation('dh')
+            .field($scope.panel.time_field)
+            .interval(_interval);
 
-        var facet = $scope.ejs.DateHistogramFacet(q.id);
-
-        if($scope.panel.mode === 'count') {
-          facet = facet.field($scope.panel.time_field).global(true);
-        } else {
+        if($scope.panel.mode !== 'count') {
           if(_.isNull($scope.panel.value_field)) {
             $scope.panel.error = "In " + $scope.panel.mode + " mode a field must be specified";
             return;
           }
-          facet = facet.keyField($scope.panel.time_field).valueField($scope.panel.value_field).global(true);
+          aggr = aggr.agg($scope.ejs.StatsAggregation('stats').field($scope.panel.value_field));
         }
-        facet = facet.interval(_interval).facetFilter($scope.ejs.QueryFilter(query));
-        request = request.facet(facet)
-          .size($scope.panel.annotate.enable ? $scope.panel.annotate.size : 0);
+
+        var filter = filterSrv.getBoolFilter(filterSrv.ids())
+            .mergeFilterMust($scope.ejs.QueryFilter(querySrv.toEjsObj(q)));
+
+        request = request
+            .size($scope.panel.annotate.enable ? $scope.panel.annotate.size : 0)
+            .agg($scope.ejs.FilterAggregation(q.id)
+                .filter(filter)
+                .agg(aggr));
+
       });
 
       if($scope.panel.annotate.enable) {
@@ -417,71 +419,73 @@ function (angular, app, $, _, kbn, moment, timeSeries, numeral) {
             counters; // Stores the bucketed hit counts.
 
           _.each(queries, function(q) {
-            var query_results = results.facets[q.id];
-            // we need to initialize the data variable on the first run,
-            // and when we are working on the first segment of the data.
-            if(_.isUndefined(data[i]) || segment === 0) {
-              var tsOpts = {
-                interval: _interval,
-                start_date: _range && _range.from,
-                end_date: _range && _range.to,
-                fill_style: $scope.panel.derivative ? 'null' : $scope.panel.zerofill ? 'minimal' : 'no'
-              };
-              time_series = new timeSeries.ZeroFilled(tsOpts);
-              hits = 0;
-              counters = {};
-            } else {
-              time_series = data[i].time_series;
-              hits = data[i].hits;
-              counters = data[i].counters;
-            }
+                var query_results = results.aggregations[q.id];
 
-            // push each entry into the time series, while incrementing counters
-            _.each(query_results.entries, function(entry) {
-              var value;
-
-              hits += entry.count; // The series level hits counter
-              $scope.hits += entry.count; // Entire dataset level hits counter
-              counters[entry.time] = (counters[entry.time] || 0) + entry.count;
-
-              if($scope.panel.mode === 'count') {
-                value = (time_series._data[entry.time] || 0) + entry.count;
-              } else if ($scope.panel.mode === 'mean') {
-                // Compute the ongoing mean by
-                // multiplying the existing mean by the existing hits
-                // plus the new mean multiplied by the new hits
-                // divided by the total hits
-                value = (((time_series._data[entry.time] || 0)*(counters[entry.time]-entry.count)) +
-                  entry.mean*entry.count)/(counters[entry.time]);
-              } else if ($scope.panel.mode === 'min'){
-                if(_.isUndefined(time_series._data[entry.time])) {
-                  value = entry.min;
+                // we need to initialize the data variable on the first run,
+                // and when we are working on the first segment of the data.
+                if(_.isUndefined(data[i]) || segment === 0) {
+                  var tsOpts = {
+                      interval: _interval,
+                      start_date: _range && _range.from,
+                      end_date: _range && _range.to,
+                      ill_style: $scope.panel.derivative ? 'null' : $scope.panel.zerofill ? 'minimal' : 'no'
+                    };
+                  time_series = new timeSeries.ZeroFilled(tsOpts);
+                  hits = 0;
+                  counters = {};
                 } else {
-                  value = time_series._data[entry.time] < entry.min ? time_series._data[entry.time] : entry.min;
+                  time_series = data[i].time_series;
+                  hits = data[i].hits;
+                  counters = data[i].counters;
                 }
-              } else if ($scope.panel.mode === 'max'){
-                if(_.isUndefined(time_series._data[entry.time])) {
-                  value = entry.max;
-                } else {
-                  value = time_series._data[entry.time] > entry.max ? time_series._data[entry.time] : entry.max;
-                }
-              } else if ($scope.panel.mode === 'total'){
-                value = (time_series._data[entry.time] || 0) + entry.total;
-              }
-              time_series.addValue(entry.time, value);
-            });
 
-            $scope.legend[i] = {query:q,hits:hits};
+                // push each entry into the time series, while incrementing counters
+                _.each(query_results.dh.buckets, function(entry) {
+                    var value;
 
-            data[i] = {
-              info: q,
-              time_series: time_series,
-              hits: hits,
-              counters: counters
-            };
+                    hits += entry.doc_count; // The series level hits counter
+                    $scope.hits += entry.doc_count; // Entire dataset level hits counter
+                    counters[entry.key] = (counters[entry.key] || 0) + entry.doc_count;
 
-            i++;
-          });
+                    if($scope.panel.mode === 'count') {
+                      value = (time_series._data[entry.key] || 0) + entry.doc_count;
+                    } else if ($scope.panel.mode === 'avg') {
+                        // Compute the ongoing mean by
+                        // multiplying the existing mean by the existing hits
+                        // plus the new mean multiplied by the new hits
+                        // divided by the total hits
+                      value = (((time_series._data[entry.key] || 0) * (counters[entry.key] - entry.doc_count)) +
+                          entry.stats.avg * entry.doc_count)/(counters[entry.key]);
+                    } else if ($scope.panel.mode === 'min'){
+                      if(_.isUndefined(time_series._data[entry.key])) {
+                        value = entry.stats.min;
+                      } else {
+                        value = time_series._data[entry.key] < entry.stats.min ? time_series._data[entry.key] : entry.stats.min;
+                      }
+                    } else if ($scope.panel.mode === 'max'){
+                      if(_.isUndefined(time_series._data[entry.key])) {
+                        value = entry.stats.max;
+                      } else {
+                        value = time_series._data[entry.key] > entry.stats.max ? time_series._data[entry.key] : entry.stats.max;
+                      }
+                    } else if ($scope.panel.mode === 'sum'){
+                      value = (time_series._data[entry.key] || 0) + entry.stats.sum;
+                    }
+                    time_series.addValue(entry.key, value);
+                  });
+
+                $scope.legend[i] = {query:q,hits:hits};
+
+                data[i] = {
+                  info: q,
+                  time_series: time_series,
+                  hits: hits,
+                  counters: counters
+                };
+
+                i++;
+              });
+
 
           if($scope.panel.annotate.enable) {
             $scope.annotations = $scope.annotations.concat(_.map(results.hits.hits, function(hit) {
